@@ -24,7 +24,7 @@ import configparser
 
 
 # define -------------------------------
-SW_VERSION = '2024.03.12'
+SW_VERSION = '2024.04.01'
 CONFIG_FILE = 'kocom.conf'
 BUF_SIZE = 100
 
@@ -299,8 +299,12 @@ def light_parse(value):
 
 def fan_parse(value):
     preset_dic = {'40':'Low', '80':'Medium', 'c0':'High'}
-    state = 'off' if value[:2] == '10' else 'on' #state = 'off' if value[:2] == '00' else 'on'
+#   state = 'off' if value[:2] == '10' else 'on'
+    state = 'off' if value[:2] == '00' else 'on'
     preset = 'Off' if state == 'off' else preset_dic.get(value[4:6])
+    logtxt='[MQTT Parse | Fan] value[{}], state[{}]'.format(value, state)    # 20221108 주석기능 추가
+    if logtxt != "" and config.get('Log', 'show_recv_hex') == 'True':
+        logging.info(logtxt)
     return { 'state': state, 'preset': preset}
 
 
@@ -471,12 +475,13 @@ def mqtt_on_message(mqttc, obj, msg):
     # kocom/livingroom/fan/set_preset_mode/command
     elif 'fan' in topic_d and 'set_preset_mode' in topic_d:
         dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'1000', 'on':'1100'}  #onoff_dic = {'off':'0000', 'on':'1101'}
+        onoff_dic = {'off':'0000', 'on':'1101'}  
+       #onoff_dic = {'off':'1000', 'on':'1100'}
         speed_dic = {'Off':'00', 'Low':'40', 'Medium':'80', 'High':'c0'}
         if command == 'Off':
-            onoff = onoff_dic['off'] 
+            onoff = onoff_dic['off']
         elif command in speed_dic.keys(): # fan on with specified speed
-            onoff = onoff_dic['on'] 
+            onoff = onoff_dic['on']
 
         speed = speed_dic.get(command)
         value = onoff + speed + '0'*10
@@ -485,10 +490,11 @@ def mqtt_on_message(mqttc, obj, msg):
     # kocom/livingroom/fan/command
     elif 'fan' in topic_d:
         dev_id = device_h_dic['fan'] + room_h_dic.get(topic_d[1])
-        onoff_dic = {'off':'1000', 'on':'1100'}  #onoff_dic = {'off':'0000', 'on':'1101'}
+        onoff_dic = {'off':'0000', 'on':'1101'}  
+       #onoff_dic = {'off':'1000', 'on':'1100'}
         speed_dic = {'Low':'40', 'Medium':'80', 'High':'c0'}
         init_fan_mode = config.get('User', 'init_fan_mode')
-        if command in onoff_dic.keys(): # fan on off with previous speed 
+        if command in onoff_dic.keys(): # fan on off with previous speed
             onoff = onoff_dic.get(command)
             speed = speed_dic.get(init_fan_mode)  #value = query(dev_id)['value']  #speed = value[4:6]
 
